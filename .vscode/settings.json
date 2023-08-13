@@ -1,0 +1,23 @@
+{
+    "files.associations": {
+        "*.html": "django-html",
+        "init.h": "c",
+        "compiler.h": "c",
+        "i2c.h": "c",
+        "acpi.h": "c",
+        "device.h": "c",
+        "dev_printk.h": "c",
+        "ratelimit.h": "c",
+        "sched.h": "c",
+        "pid.h": "c",
+        "shm.h": "c",
+        "plist.h": "c",
+        "current.h": "c",
+        "thread_info.h": "c",
+        "types.h": "c",
+        "compiler_types.h": "c",
+        "module.h": "c",
+        "rwonce.h": "c"
+    },
+    "git.openRepositoryInParentFolders": "prompt"
+}
