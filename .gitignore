@@ -1,1 +1,9 @@
 .history
+.Module*
+.modules*
+.nunchuk*
+nunchuk.ko
+nunchuk.mod*
+nunchuk.o
+Module.symvers
+modules.order
