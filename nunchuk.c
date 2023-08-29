@@ -3,6 +3,7 @@
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
+#include <linux/input.h>
 
 static int nunchuk_read_registers(struct i2c_client *client, char *buf, int buf_size) {
     int res = 0;
@@ -26,46 +27,52 @@ static int nunchuk_read_registers(struct i2c_client *client, char *buf, int buf_
 static int nunchuk_i2c_probe(struct i2c_client *client,
                              const struct i2c_device_id *id)
 {
-    char init_cmd_1[] = { 0xf0, 0x55 };
-    char init_cmd_2[] = { 0xfb, 0x00 };
-    char registers[6] = {};
-    int z_pressed = 0;
-    int c_pressed = 0;
     int res = 0;
 
-    pr_info("nunchuk_i2c_probe get called\n");
+    struct input_dev *input;
+    input = devm_input_allocate_device(&client->dev);
+    res = input_register_device(input);
 
-    res = i2c_master_send(client, init_cmd_1, ARRAY_SIZE(init_cmd_1));
-    if (res < 0) {
-        pr_err("init_cmd_1 failed\n");
-        return res;
-    }
-    udelay(1000);
-    res = i2c_master_send(client, init_cmd_2, ARRAY_SIZE(init_cmd_2));
-    if (res < 0) {
-        pr_err("init_cmd_2 failed\n");
-        return res;
-    }
-    nunchuk_read_registers(client, registers, ARRAY_SIZE(registers));
-    res = nunchuk_read_registers(client, registers, ARRAY_SIZE(registers));
-    if (res < 0) {
-        pr_err("Failed to read registers\n");
-        return -1;
-    }
-    z_pressed = registers[5] & 0x1;
-    if (z_pressed == 0) {
-        z_pressed = 1;
-    } else {
-        z_pressed = 0;
-    }
-    c_pressed = registers[5] >> 1 & 0x1;
-    if (c_pressed == 0) {
-        c_pressed = 1;
-    } else {
-        c_pressed = 0;
-    }
 
-    pr_info("z pressed -> %d, c pressed -> %d\n", z_pressed, c_pressed);
+    // char init_cmd_1[] = { 0xf0, 0x55 };
+    // char init_cmd_2[] = { 0xfb, 0x00 };
+    // char registers[6] = {};
+    // int z_pressed = 0;
+    // int c_pressed = 0;
+
+    // pr_info("nunchuk_i2c_probe get called\n");
+
+    // res = i2c_master_send(client, init_cmd_1, ARRAY_SIZE(init_cmd_1));
+    // if (res < 0) {
+    //     pr_err("init_cmd_1 failed\n");
+    //     return res;
+    // }
+    // udelay(1000);
+    // res = i2c_master_send(client, init_cmd_2, ARRAY_SIZE(init_cmd_2));
+    // if (res < 0) {
+    //     pr_err("init_cmd_2 failed\n");
+    //     return res;
+    // }
+    // nunchuk_read_registers(client, registers, ARRAY_SIZE(registers));
+    // res = nunchuk_read_registers(client, registers, ARRAY_SIZE(registers));
+    // if (res < 0) {
+    //     pr_err("Failed to read registers\n");
+    //     return -1;
+    // }
+    // z_pressed = registers[5] & 0x1;
+    // if (z_pressed == 0) {
+    //     z_pressed = 1;
+    // } else {
+    //     z_pressed = 0;
+    // }
+    // c_pressed = registers[5] >> 1 & 0x1;
+    // if (c_pressed == 0) {
+    //     c_pressed = 1;
+    // } else {
+    //     c_pressed = 0;
+    // }
+
+    // pr_info("z pressed -> %d, c pressed -> %d\n", z_pressed, c_pressed);
 
     return 0;
 }

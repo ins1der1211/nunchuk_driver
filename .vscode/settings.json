@@ -17,7 +17,9 @@
         "types.h": "c",
         "compiler_types.h": "c",
         "module.h": "c",
-        "rwonce.h": "c"
+        "rwonce.h": "c",
+        "input.h": "c",
+        "delay.h": "c"
     },
     "git.openRepositoryInParentFolders": "prompt"
 }

@@ -3,9 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
-                "/home/ins1der/BootlinCourse/NEW2/buildroot/output/build/linux-custom/include",
-                "/home/ins1der/BootlinCourse/NEW2/buildroot/output/build/linux-custom/arch/arm/include/**"
+                "/home/ins1der/BootlinCourse/NEW2/buildroot/output/build/linux-custom/include/",
+                "/home/ins1der/BootlinCourse/NEW2/buildroot/output/build/linux-custom/arch/arm/include/**",
+                "${workspaceFolder}/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
