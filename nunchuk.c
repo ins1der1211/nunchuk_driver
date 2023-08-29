@@ -5,42 +5,71 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 
-static int nunchuk_read_registers(struct i2c_client *client, char *buf, int buf_size) {
+struct nunchuk_dev
+{
+    struct i2c_client *i2c_client;
+};
+
+static int nunchuk_read_registers(struct i2c_client *client, char *buf, int buf_size)
+{
     int res = 0;
-    char read_cmd[] = { 0x00 };
-    
+    char read_cmd[] = {0x00};
+
     usleep_range(10000, 20000);
     res = i2c_master_send(client, read_cmd, 1);
-    if (res < 0) {
+    if (res < 0)
+    {
         pr_err("nunchuk_read_registers failed with code %d\n", res);
         return -1;
     }
     usleep_range(10000, 20000);
     res = i2c_master_recv(client, buf, buf_size);
-    if (res < 0) {
+    if (res < 0)
+    {
         pr_err("nunchuk_read_registers failed with code %d\n", res);
         return -1;
     }
     return 0;
 }
 
+static void nunchuk_poll(struct input_dev *dev)
+{
+}
+
 static int nunchuk_i2c_probe(struct i2c_client *client,
                              const struct i2c_device_id *id)
 {
     int res = 0;
-
     struct input_dev *input;
-    input = devm_input_allocate_device(&client->dev);
-    res = input_register_device(input);
+    struct nunchuk_dev *nunchuk;
 
+    input = devm_input_allocate_device(&client->dev);
+    if (!input)
+        return -ENOMEM;
+    input->name = "Wii Nunchuk";
+    input->id.bustype = BUS_I2C;
+    set_bit(EV_KEY, input->evbit);
+    set_bit(BTN_C, input->keybit);
+    set_bit(BTN_Z, input->keybit);
+
+    nunchuk = devm_kzalloc(&client->dev, sizeof(*nunchuk), GFP_KERNEL);
+    if (!nunchuk)
+        return -ENOMEM;
+    nunchuk->i2c_client = client;
+    input_set_drvdata(input, nunchuk);
+
+    res = input_register_device(input);
+    if (res != 0)
+    {
+        pr_err("Device register failure\n");
+        return res;
+    }
 
     // char init_cmd_1[] = { 0xf0, 0x55 };
     // char init_cmd_2[] = { 0xfb, 0x00 };
     // char registers[6] = {};
     // int z_pressed = 0;
     // int c_pressed = 0;
-
-    // pr_info("nunchuk_i2c_probe get called\n");
 
     // res = i2c_master_send(client, init_cmd_1, ARRAY_SIZE(init_cmd_1));
     // if (res < 0) {
@@ -85,15 +114,13 @@ static int nunchuk_i2c_remove(struct i2c_client *client)
 
 static const struct i2c_device_id nunchuk_id[] = {
     {"nunchuk", 0},
-    {}
-};
+    {}};
 
 MODULE_DEVICE_TABLE(i2c, nunchuk_id);
 
 static const struct of_device_id nunchuk_of_match[] = {
     {.compatible = "nintendo,nunchuk"},
-    {}
-};
+    {}};
 
 MODULE_DEVICE_TABLE(of, nunchuk_of_match);
 
