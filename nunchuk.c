@@ -5,114 +5,109 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 
-static char init_cmd_1[] = {0xf0, 0x55};
-static char init_cmd_2[] = {0xfb, 0x00};
-static char read_cmd[] = {0x00};
-
 struct nunchuk_dev
 {
     struct i2c_client *i2c_client;
 };
 
+static s32 nunchuk_read_registers(struct i2c_client *client, u8 *buf, int buf_size)
+{
+    s32 status;
+    mdelay(10);
+    buf[0] = 0x00;
+    status = i2c_master_send(client, buf, 1);
+    if (status < 0)
+    {
+        return status;
+    }
+    mdelay(10);
+    return i2c_master_recv(client, buf, buf_size);
+}
+
 static void nunchuk_poll(struct input_dev *dev)
 {
-    int res = 0;
-    char registers[6] = {};
-    int z_pressed = 0;
-    int c_pressed = 0;
-
+    u8 buf[6];
+    u8 joystick_x;
+    u8 joystick_y;
     struct nunchuk_dev *nunchuk = input_get_drvdata(dev);
     struct i2c_client *client = nunchuk->i2c_client;
-
-    // init device
-    res = i2c_master_send(client, init_cmd_1, ARRAY_SIZE(init_cmd_1));
-    if (res < 0)
-    {
-        pr_err("init_cmd_1 failed\n");
-        return;
-    }
-    udelay(1000);
-    res = i2c_master_send(client, init_cmd_2, ARRAY_SIZE(init_cmd_2));
-    if (res < 0)
-    {
-        pr_err("init_cmd_2 failed\n");
-        return;
-    }
-
-    // read registers
-    usleep_range(10000, 20000);
-    res = i2c_master_send(client, read_cmd, 1);
-    if (res < 0)
-    {
-        pr_err("read registers failed with code %d\n", res);
-        return;
-    }
-    usleep_range(10000, 20000);
-    res = i2c_master_recv(client, registers, ARRAY_SIZE(registers));
-    if (res < 0)
-    {
-        pr_err("read registers failed with code %d\n", res);
-        return;
-    }
-
-    z_pressed = registers[5] & 0x1;
-    if (z_pressed == 0)
-    {
-        z_pressed = 1;
-    }
-    else
-    {
-        z_pressed = 0;
-    }
-    c_pressed = registers[5] >> 1 & 0x1;
-    if (c_pressed == 0)
-    {
-        c_pressed = 1;
-    }
-    else
-    {
-        c_pressed = 0;
-    }
-
-    input_report_key(dev, BTN_Z, z_pressed);
-    input_report_key(dev, BTN_C, c_pressed);
-    input_sync(dev);
+    
 }
 
 static int nunchuk_i2c_probe(struct i2c_client *client,
                              const struct i2c_device_id *id)
 {
-    int res = 0;
-    struct input_dev *input;
+    u8 buf[2];
+    s32 status;
     struct nunchuk_dev *nunchuk;
 
-    input = devm_input_allocate_device(&client->dev);
+    struct input_dev *input = devm_input_allocate_device(&client->dev);
     if (!input)
+    {
+        pr_err("Can't allocate device, enomem\n");
         return -ENOMEM;
+    }
+
+    nunchuk = devm_kzalloc(&client->dev, sizeof(*nunchuk), GFP_KERNEL);
+    if (!nunchuk)
+    {
+        return -ENOMEM;
+    }
+    nunchuk->i2c_client = client;
+    input_set_drvdata(input, nunchuk);
+
     input->name = "Wii Nunchuk";
     input->id.bustype = BUS_I2C;
+
     set_bit(EV_KEY, input->evbit);
     set_bit(BTN_C, input->keybit);
     set_bit(BTN_Z, input->keybit);
 
-    nunchuk = devm_kzalloc(&client->dev, sizeof(*nunchuk), GFP_KERNEL);
-    if (!nunchuk)
-        return -ENOMEM;
-    nunchuk->i2c_client = client;
-    input_set_drvdata(input, nunchuk);
+    set_bit(BTN_TL, input->keybit);
+    set_bit(BTN_SELECT, input->keybit);
+    set_bit(BTN_MODE, input->keybit);
+    set_bit(BTN_START, input->keybit);
+    set_bit(BTN_TR, input->keybit);
+    set_bit(BTN_TL2, input->keybit);
+    set_bit(BTN_B, input->keybit);
+    set_bit(BTN_Y, input->keybit);
+    set_bit(BTN_A, input->keybit);
+    set_bit(BTN_X, input->keybit);
+    set_bit(BTN_TR2, input->keybit);
 
-    res = input_setup_polling(input, nunchuk_poll);
-    if (res)
+    set_bit(EV_ABS, input->evbit);
+    set_bit(ABS_X, input->absbit);
+    set_bit(ABS_Y, input->absbit);
+    input_set_abs_params(input, ABS_X, 30, 220, 4, 8);
+    input_set_abs_params(input, ABS_Y, 40, 200, 4, 8);
+
+    input_setup_polling(input, nunchuk_poll);
+
+    /* Nunchuk handshake */
+    buf[0] = 0xf0;
+    buf[1] = 0x55;
+    status = i2c_master_send(client, buf, 2);
+    if (status < 0)
     {
-        pr_err("input_setup_polling failed\n");
-        return res;
+        dev_err(&client->dev, "nunchuk handshake failed - %d\n", status);
+        return status;
+    }
+    udelay(1);
+    buf[0] = 0xfb;
+    buf[1] = 0x00;
+    status = i2c_master_send(client, buf, 2);
+    if (status < 0)
+    {
+        dev_err(&client->dev, "nunchuk handshake failed - %d\n", status);
+        return status;
     }
 
-    res = input_register_device(input);
-    if (res != 0)
+    /* Register device */
+    status = input_register_device(input);
+    if (status < 0)
     {
-        pr_err("Device register failure\n");
-        return res;
+        dev_err(&client->dev, "Can't register device - %d\n", status);
+        return status;
     }
 
     return 0;
@@ -120,7 +115,6 @@ static int nunchuk_i2c_probe(struct i2c_client *client,
 
 static int nunchuk_i2c_remove(struct i2c_client *client)
 {
-    pr_info("nunchuk_i2c_remove get called\n");
     return 0;
 }
 
