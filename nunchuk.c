@@ -46,12 +46,12 @@ static void nunchuk_poll(struct input_dev *dev)
     c_pressed = !(buf[5] & 0x2);
     z_pressed = !(buf[5] & 0x1);
 
-    input_report_abs(&client->dev, ABS_X, joystick_x);
-    input_report_abs(&client->dev, ABS_Y, joystick_y);
-    input_event(&client->dev, EV_KEY, BTN_C, c_pressed);
-    input_event(&client->dev, EV_KEY, BTN_Z, z_pressed);
+    input_report_abs(dev, ABS_X, joystick_x);
+    input_report_abs(dev, ABS_Y, joystick_y);
+    input_report_key(dev, BTN_C, c_pressed);
+    input_report_key(dev, BTN_Z, z_pressed);
 
-    input_sync(&client->dev);
+    input_sync(dev);
     
 }
 
@@ -84,18 +84,6 @@ static int nunchuk_i2c_probe(struct i2c_client *client,
     set_bit(BTN_C, input->keybit);
     set_bit(BTN_Z, input->keybit);
 
-    set_bit(BTN_TL, input->keybit);
-    set_bit(BTN_SELECT, input->keybit);
-    set_bit(BTN_MODE, input->keybit);
-    set_bit(BTN_START, input->keybit);
-    set_bit(BTN_TR, input->keybit);
-    set_bit(BTN_TL2, input->keybit);
-    set_bit(BTN_B, input->keybit);
-    set_bit(BTN_Y, input->keybit);
-    set_bit(BTN_A, input->keybit);
-    set_bit(BTN_X, input->keybit);
-    set_bit(BTN_TR2, input->keybit);
-
     set_bit(EV_ABS, input->evbit);
     set_bit(ABS_X, input->absbit);
     set_bit(ABS_Y, input->absbit);
@@ -112,7 +100,7 @@ static int nunchuk_i2c_probe(struct i2c_client *client,
     status = i2c_master_send(client, buf, 2);
     if (status < 0)
     {
-        dev_err(&client->dev, "nunchuk handshake failed - %d\n", status);
+        dev_err(&client->dev, "nunchuk handshake failed #1 - %d\n", status);
         return status;
     }
     udelay(1);
@@ -121,7 +109,7 @@ static int nunchuk_i2c_probe(struct i2c_client *client,
     status = i2c_master_send(client, buf, 2);
     if (status < 0)
     {
-        dev_err(&client->dev, "nunchuk handshake failed - %d\n", status);
+        dev_err(&client->dev, "nunchuk handshake failed #2 - %d\n", status);
         return status;
     }
 
