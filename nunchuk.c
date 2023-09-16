@@ -29,8 +29,29 @@ static void nunchuk_poll(struct input_dev *dev)
     u8 buf[6];
     u8 joystick_x;
     u8 joystick_y;
+    u8 c_pressed;
+    u8 z_pressed;
     struct nunchuk_dev *nunchuk = input_get_drvdata(dev);
     struct i2c_client *client = nunchuk->i2c_client;
+
+    s32 status;
+
+    status = nunchuk_read_registers(client, buf, ARRAY_SIZE(buf));
+    if (status < 0) {
+        dev_err(&client->dev, "Can't read device registers -> %d\n", status);
+        return;
+    }
+    joystick_x = buf[0];
+    joystick_y = buf[1];
+    c_pressed = !(buf[5] & 0x2);
+    z_pressed = !(buf[5] & 0x1);
+
+    input_report_abs(&client->dev, ABS_X, joystick_x);
+    input_report_abs(&client->dev, ABS_Y, joystick_y);
+    input_event(&client->dev, EV_KEY, BTN_C, c_pressed);
+    input_event(&client->dev, EV_KEY, BTN_Z, z_pressed);
+
+    input_sync(&client->dev);
     
 }
 
@@ -82,6 +103,8 @@ static int nunchuk_i2c_probe(struct i2c_client *client,
     input_set_abs_params(input, ABS_Y, 40, 200, 4, 8);
 
     input_setup_polling(input, nunchuk_poll);
+    input_set_poll_interval(input, 50);
+
 
     /* Nunchuk handshake */
     buf[0] = 0xf0;
